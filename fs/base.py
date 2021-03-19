@@ -662,6 +662,22 @@ class FS(object):
 
     gettext = _new_name(readtext, "gettext")
 
+    def getmodified(self, path):
+        # type: (Text) -> datetime
+        """Get the timestamp of the last modifying access of a resource.
+
+        Arguments:
+            path (str): A path to a resource.
+
+        Returns:
+            datetime: The timestamp of the last modification.
+
+        The *modified timestamp* of a file is the point in time
+        that the file was last changed. Depending on the file system,
+        it might only have limited accuracy.
+        """
+        return self.getinfo(path, ("detail", "modified")).modified
+
     def getmeta(self, namespace="standard"):
         # type: (Text) -> Mapping[Text, object]
         """Get meta information regarding a filesystem.

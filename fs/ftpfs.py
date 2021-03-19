@@ -13,6 +13,7 @@ import threading
 import typing
 from collections import OrderedDict
 from contextlib import contextmanager
+from datetime import datetime
 from ftplib import FTP
 
 try:
@@ -574,6 +575,15 @@ class FTPFS(FS):
                 )
                 return True
         return False
+
+    def getmodified(self, path):
+        # type: (Text) -> datetime
+        if "MDTM" in self.features:
+            # TODO
+            pass
+
+        return self.getinfo(path, ["details", "modified"]).modified
+
 
     @classmethod
     def _parse_ftp_time(cls, time_text):
