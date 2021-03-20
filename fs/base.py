@@ -678,7 +678,7 @@ class FS(object):
         it might only have limited accuracy.
 
         """
-        timestamp = self.getinfo(path, ("detail", "modified")).modified
+        timestamp = self.getinfo(path, ("details", "modified")).modified
         if timestamp is None:
             raise Unsupported(
                 "Last modified time is not supported by the filesystem for the requested resource: "
