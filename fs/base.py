@@ -681,7 +681,8 @@ class FS(object):
         timestamp = self.getinfo(path, ("details", "modified")).modified
         if timestamp is None:
             raise Unsupported(
-                "Last modified time is not supported by the filesystem for the requested resource: "
+                "Last modified time is not supported by the filesystem"
+                + "for the requested resource: "
                 + path
             )
         else:

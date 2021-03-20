@@ -97,7 +97,6 @@ def _source_is_newer(src_fs, src_path, dst_fs, dst_path):
     """
     try:
         if dst_fs.exists(dst_path):
-            namespace = ("details", "modified")
             src_modified = src_fs.getmodified(src_path)
             if src_modified is not None:
                 dst_modified = dst_fs.getmodified(dst_path)
