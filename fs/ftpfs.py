@@ -16,6 +16,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from ftplib import FTP
 
+from .time import epoch_to_datetime
+
 try:
     from ftplib import FTP_TLS
 except ImportError as err:
@@ -579,11 +581,14 @@ class FTPFS(FS):
     def getmodified(self, path):
         # type: (Text) -> datetime
         if "MDTM" in self.features:
-            # TODO
-            pass
-
-        return self.getinfo(path, ["details", "modified"]).modified
-
+            with self._lock:
+                with ftp_errors(self, path=path):
+                    cmd = "MDTM " + _encode(self.validatepath(path), self.ftp.encoding)
+                    response = self.ftp.sendcmd(cmd)
+                time_num = self._parse_ftp_time(response.split()[1])
+                if time_num is not None:
+                    return epoch_to_datetime(time_num)
+        return super(FTPFS, self).getmodified(path)
 
     @classmethod
     def _parse_ftp_time(cls, time_text):

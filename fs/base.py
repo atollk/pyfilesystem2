@@ -22,6 +22,7 @@ import warnings
 import six
 
 from . import copy, errors, fsencode, iotools, move, tools, walk, wildcard
+from .errors import Unsupported
 from .glob import BoundGlobber
 from .mode import validate_open_mode
 from .path import abspath, join, normpath
@@ -675,8 +676,16 @@ class FS(object):
         The *modified timestamp* of a file is the point in time
         that the file was last changed. Depending on the file system,
         it might only have limited accuracy.
+
         """
-        return self.getinfo(path, ("detail", "modified")).modified
+        timestamp = self.getinfo(path, ("detail", "modified")).modified
+        if timestamp is None:
+            raise Unsupported(
+                "Last modified time is not supported by the filesystem for the requested resource: "
+                + path
+            )
+        else:
+            return timestamp
 
     def getmeta(self, namespace="standard"):
         # type: (Text) -> Mapping[Text, object]
