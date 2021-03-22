@@ -27,6 +27,50 @@ _PATTERN_CACHE = LRUCache(
 )  # type: LRUCache[Tuple[Text, bool], Tuple[int, bool, Pattern]]
 
 
+def _translate(pattern, case_sensitive=True):
+    # type: (Text, bool) -> Text
+    """Translate a wildcard pattern to a regular expression.
+    There is no way to quote meta-characters.
+    Arguments:
+        pattern (str): A wildcard pattern.
+        case_sensitive (bool): Set to `False` to use a case
+            insensitive regex (default `True`).
+    Returns:
+        str: A regex equivalent to the given pattern.
+    """
+    if not case_sensitive:
+        pattern = pattern.lower()
+    i, n = 0, len(pattern)
+    res = ""
+    while i < n:
+        c = pattern[i]
+        i = i + 1
+        if c == "*":
+            res = res + "[^/]*"
+        elif c == "?":
+            res = res + "."
+        elif c == "[":
+            j = i
+            if j < n and pattern[j] == "!":
+                j = j + 1
+            if j < n and pattern[j] == "]":
+                j = j + 1
+            while j < n and pattern[j] != "]":
+                j = j + 1
+            if j >= n:
+                res = res + "\\["
+            else:
+                stuff = pattern[i:j].replace("\\", "\\\\")
+                i = j + 1
+                if stuff[0] == "!":
+                    stuff = "^" + stuff[1:]
+                elif stuff[0] == "^":
+                    stuff = "\\" + stuff
+                res = "%s[%s]" % (res, stuff)
+        else:
+            res = res + re.escape(c)
+    return res
+
 def _translate_glob(pattern, case_sensitive=True):
     levels = 0
     recursive = False
@@ -37,7 +81,7 @@ def _translate_glob(pattern, case_sensitive=True):
             recursive = True
         else:
             re_patterns.append(
-                "/" + wildcard._translate(component, case_sensitive=case_sensitive)
+                "/" + _translate(component, case_sensitive=case_sensitive)
             )
         levels += 1
     re_glob = "(?ms)^" + "".join(re_patterns) + ("/$" if pattern.endswith("/") else "$")

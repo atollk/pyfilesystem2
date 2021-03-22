@@ -314,6 +314,16 @@ class TestFiles(TestBoundWalkerBase):
 
         self.assertEqual(files, [])
 
+    def test_walk_files_filter_glob(self):
+        files = list(self.fs.walk.files(filter_glob=["/foo2/**"]))
+        self.assertEqual(
+            files,
+            [
+                "/foo2/top3.bin",
+                "/foo2/bar2/bar3/test.txt",
+            ],
+        )
+
     def test_walk_files_exclude(self):
         # Test exclude argument works
         files = list(self.fs.walk.files(exclude=["*.txt"]))

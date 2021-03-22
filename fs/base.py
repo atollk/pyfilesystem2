@@ -539,22 +539,22 @@ class FS(object):
         def match_dir(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_file or self._match(patterns, info.name)
+            return info.is_file or self.match(patterns, info.name)
 
         def match_file(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_dir or self._match(patterns, info.name)
+            return info.is_dir or self.match(patterns, info.name)
 
         def exclude_dir(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_file or not self._match(patterns, info.name)
+            return info.is_file or not self.match(patterns, info.name)
 
         def exclude_file(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_dir or not self._match(patterns, info.name)
+            return info.is_dir or not self.match(patterns, info.name)
 
         if files:
             filters.append(partial(match_file, files))
@@ -1581,7 +1581,9 @@ class FS(object):
         case_sensitive = not typing.cast(
             bool, self.getmeta().get("case_insensitive", False)
         )
-        matcher = wildcard.get_matcher(patterns, case_sensitive, accept_prefix=accept_prefix)
+        matcher = wildcard.get_matcher(
+            patterns, case_sensitive, accept_prefix=accept_prefix
+        )
         return matcher(name)
 
     def tree(self, **kwargs):

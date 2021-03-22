@@ -276,7 +276,8 @@ class Walker(object):
     def _check_file(self, fs, dir_path, info):
         # type: (FS, Text, Info) -> bool
         """Check if a filename should be included."""
-        # Weird check required for backwards compatibility, when _check_file did not exist.
+        # Weird check required for backwards compatibility,
+        # when _check_file did not exist.
         if Walker._check_file == type(self)._check_file:
             if self.exclude is not None and fs.match(self.exclude, info.name):
                 return False

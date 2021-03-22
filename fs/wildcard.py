@@ -1,12 +1,12 @@
 """Match wildcard filenames.
 
-    Patterns are derived from Unix shell style:
+Patterns are derived from Unix shell style:
 
-    *       matches everything except for a path seperator
-    **      matches everything
-    ?       matches any single character
-    [seq]   matches any character in seq
-    [!seq]  matches any char not in seq
+*       matches everything except for a path seperator
+**      matches everything
+?       matches any single character
+[seq]   matches any character in seq
+[!seq]  matches any char not in seq
 """
 
 from __future__ import unicode_literals, print_function
@@ -19,7 +19,9 @@ if typing.TYPE_CHECKING:
     from typing import Callable, Iterable, Text, Tuple
 
 
-_PATTERN_CACHE = LRUCache(1000)  # type: LRUCache[Tuple[Text, bool, bool], PatternMatcher]
+_PATTERN_CACHE = LRUCache(
+    1000
+)  # type: LRUCache[Tuple[Text, bool, bool], _PatternMatcher]
 
 
 def match(pattern, name, accept_prefix=False):
@@ -38,7 +40,7 @@ def match(pattern, name, accept_prefix=False):
     try:
         pat = _PATTERN_CACHE[args]
     except KeyError:
-        pat = PatternMatcher(*args)
+        pat = _PatternMatcher(*args)
         _PATTERN_CACHE[args] = pat
     return pat(name)
 
@@ -59,7 +61,7 @@ def imatch(pattern, name, accept_prefix=False):
     try:
         pat = _PATTERN_CACHE[args]
     except KeyError:
-        pat = PatternMatcher(*args)
+        pat = _PatternMatcher(*args)
         _PATTERN_CACHE[args] = pat
     return pat(name)
 
@@ -138,7 +140,7 @@ def get_matcher(patterns, case_sensitive, accept_prefix=False):
         return lambda name: imatch_any(patterns, name, accept_prefix)
 
 
-class PatternMatcher:
+class _PatternMatcher:
     def __init__(self, pattern, case_sensitive, accept_prefixes):
         self.case_sensitive = case_sensitive
         self.accept_prefixes = accept_prefixes
@@ -151,16 +153,24 @@ class PatternMatcher:
                 i = pattern.find("]", i) + 1
                 self.tokens.append(_PatternMatcherToken(pattern[start:i]))
             elif pattern[i] == "]":
-                raise ValueError(pattern + " is not a valid wildcard pattern. (unmatched ])")
+                raise ValueError(
+                    pattern + " is not a valid wildcard pattern. (unmatched ])"
+                )
             elif pattern[i] == "?":
                 self.tokens.append(_PatternMatcherToken("?"))
                 i += 1
             elif pattern[i] == "*":
                 asterik_len = 1
-                while (asterik_len + i) < len(pattern) and pattern[asterik_len + i] == "*":
+                while (asterik_len + i) < len(pattern) and pattern[
+                    asterik_len + i
+                ] == "*":
                     asterik_len += 1
                 if asterik_len > 2:
-                    raise ValueError(pattern + " is not a valid wildcard pattern. (sequence of three or more *)")
+                    raise ValueError(
+                        pattern
+                        + " is not a valid wildcard pattern. "
+                        + "(sequence of three or more *)"
+                    )
                 self.tokens.append(_PatternMatcherToken("*" * asterik_len))
                 i += asterik_len
             else:
