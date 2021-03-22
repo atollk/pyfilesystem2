@@ -283,6 +283,15 @@ class TestFiles(TestBoundWalkerBase):
         self.assertEqual(sub_walker.walker_class, CustomWalker)
         six.assertCountEqual(self, ["/c", "/d"], sub_walker.files())
 
+    def test_check_file_overwrite(self):
+        class CustomWalker(walk.Walker):
+            def check_file(self, fs, info):
+                return False
+
+        walker = CustomWalker()
+        files = list(walker.files(self.fs))
+        self.assertEqual(files, [])
+
 
 class TestInfo(TestBoundWalkerBase):
     def test_walk_info(self):

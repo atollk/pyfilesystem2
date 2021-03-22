@@ -62,6 +62,8 @@ class Walker(object):
         filter_dirs=None,  # type: Optional[List[Text]]
         exclude_dirs=None,  # type: Optional[List[Text]]
         max_depth=None,  # type: Optional[int]
+        filter_glob=None,  # type: Optional[List[Text]]
+        exclude_glob=None,  # type: Optional[List[Text]]
     ):
         # type: (...) -> None
         """Create a new `Walker` instance.
@@ -85,11 +87,22 @@ class Walker(object):
                 any of these patterns will be removed from the walk.
             filter_dirs (list, optional): A list of patterns that will be used
                 to match directories paths. The walk will only open directories
-                that match at least one of these patterns.
+                that match at least one of these patterns. Directories will
+                only be returned if the final component matches one of the
+                patterns.
             exclude_dirs (list, optional): A list of patterns that will be
                 used to filter out directories from the walk. e.g.
-                ``['*.svn', '*.git']``.
+                ``['*.svn', '*.git']``. Directories matching any of these
+                patterns will be removed from the walk.
             max_depth (int, optional): Maximum directory depth to walk.
+            filter_glob (list, optional): If supplied, this parameter
+                should be a list of path patterns e.g. ``["foo/**/*.py"]``.
+                Resources will only be returned if their global patah
+                matches one of the patterns.
+            exclude_glob (list, optional): If supplied, this parameter
+                should be a list of path patterns e.g. ``["foo/**/*.py"]``.
+                Resources will only be returned if their global patah
+                matches one of the patterns.
 
         """
         if search not in ("breadth", "depth"):
@@ -109,6 +122,8 @@ class Walker(object):
         self.exclude = exclude
         self.filter_dirs = filter_dirs
         self.exclude_dirs = exclude_dirs
+        self.filter_glob = filter_glob
+        self.exclude_glob = exclude_glob
         self.max_depth = max_depth
         super(Walker, self).__init__()
 
@@ -180,6 +195,8 @@ class Walker(object):
             filter_dirs=(self.filter_dirs, None),
             exclude_dirs=(self.exclude_dirs, None),
             max_depth=(self.max_depth, None),
+            filter_glob=(self.filter_glob, None),
+            exclude_glob=(self.exclude_glob, None),
         )
 
     def _iter_walk(
@@ -200,7 +217,11 @@ class Walker(object):
         """Check if a directory should be considered in the walk."""
         if self.exclude_dirs is not None and fs.match(self.exclude_dirs, info.name):
             return False
+        if self.exclude_glob is not None and fs.match(self.exclude_glob, path):
+            return False
         if self.filter_dirs is not None and not fs.match(self.filter_dirs, info.name):
+            return False
+        if self.filter_glob is not None and not fs.match(self.filter_glob, path):
             return False
         return self.check_open_dir(fs, path, info)
 
@@ -247,6 +268,17 @@ class Walker(object):
         """
         return True
 
+    def _check_file(self, fs, info):
+        # type: (FS, Info) -> bool
+        """Check if a filename should be included."""
+        # Weird check required for backwards compatibility, when _check_file did not exist.
+        if Walker._check_file == type(self)._check_file:
+            if self.exclude is not None and fs.match(self.exclude, info.name):
+                return False
+            if self.filter is not None and not fs.match(self.filter, info.name):
+                return False
+        return self.check_file(fs, info)
+
     def check_file(self, fs, info):
         # type: (FS, Info) -> bool
         """Check if a filename should be included.
@@ -261,9 +293,7 @@ class Walker(object):
             bool: `True` if the file should be included.
 
         """
-        if self.exclude is not None and fs.match(self.exclude, info.name):
-            return False
-        return fs.match(self.filter, info.name)
+        return True
 
     def _scan(
         self,
@@ -418,7 +448,7 @@ class Walker(object):
         _calculate_depth = self._calculate_depth
         _check_open_dir = self._check_open_dir
         _check_scan_dir = self._check_scan_dir
-        _check_file = self.check_file
+        _check_file = self._check_file
 
         depth = _calculate_depth(path)
 
@@ -451,7 +481,7 @@ class Walker(object):
         _calculate_depth = self._calculate_depth
         _check_open_dir = self._check_open_dir
         _check_scan_dir = self._check_scan_dir
-        _check_file = self.check_file
+        _check_file = self._check_file
         depth = _calculate_depth(path)
 
         stack = [
