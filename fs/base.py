@@ -539,22 +539,22 @@ class FS(object):
         def match_dir(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_file or self.match(patterns, info.name)
+            return info.is_file or self._match(patterns, info.name)
 
         def match_file(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_dir or self.match(patterns, info.name)
+            return info.is_dir or self._match(patterns, info.name)
 
         def exclude_dir(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_file or not self.match(patterns, info.name)
+            return info.is_file or not self._match(patterns, info.name)
 
         def exclude_file(patterns, info):
             # type: (Optional[Iterable[Text]], Info) -> bool
             """Pattern match info.name."""
-            return info.is_dir or not self.match(patterns, info.name)
+            return info.is_dir or not self._match(patterns, info.name)
 
         if files:
             filters.append(partial(match_file, files))
@@ -1543,13 +1543,16 @@ class FS(object):
         if self.isclosed():
             raise errors.FilesystemClosed()
 
-    def match(self, patterns, name):
-        # type: (Optional[Iterable[Text]], Text) -> bool
+    def match(self, patterns, name, accept_prefix=False):
+        # type: (Optional[Iterable[Text]], Text, bool) -> bool
         """Check if a name matches any of a list of wildcards.
 
         Arguments:
             patterns (list): A list of patterns, e.g. ``['*.py']``
             name (str): A file or directory name (not a path)
+            accept_prefix (bool): If ``True``, the name is
+                not required to match the wildcards themselves
+                but only need to be a prefix of a string that does.
 
         Returns:
             bool: `True` if ``name`` matches any of the patterns.
@@ -1561,9 +1564,9 @@ class FS(object):
         names).
 
         Example:
-            >>> home_fs.match(['*.py'], '__init__.py')
+            >>> home_fs._match(['*.py'], '__init__.py')
             True
-            >>> home_fs.match(['*.jpg', '*.png'], 'foo.gif')
+            >>> home_fs._match(['*.jpg', '*.png'], 'foo.gif')
             False
 
         Note:
@@ -1578,7 +1581,7 @@ class FS(object):
         case_sensitive = not typing.cast(
             bool, self.getmeta().get("case_insensitive", False)
         )
-        matcher = wildcard.get_matcher(patterns, case_sensitive)
+        matcher = wildcard.get_matcher(patterns, case_sensitive, accept_prefix=accept_prefix)
         return matcher(name)
 
     def tree(self, **kwargs):

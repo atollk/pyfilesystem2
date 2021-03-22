@@ -1783,9 +1783,9 @@ class FSTestCases(object):
             self.fs.movedir("foo2/foofoo.txt", "foo2/baz/egg")
 
     def test_match(self):
-        self.assertTrue(self.fs.match(["*.py"], "foo.py"))
+        self.assertTrue(self.fs._match(["*.py"], "foo.py"))
         self.assertEqual(
-            self.fs.match(["*.py"], "FOO.PY"),
+            self.fs._match(["*.py"], "FOO.PY"),
             self.fs.getmeta().get("case_insensitive", False),
         )
 

@@ -98,12 +98,38 @@ class TestWalk(TestBoundWalkerBase):
         with self.assertRaises(ValueError):
             self.fs.walk(search="random")
 
-    def test_walk(self):
+    def test_walk_simple(self):
         _walk = self._walk_step_names()
         expected = [
             ("/", ["foo1", "foo2", "foo3"], []),
             ("/foo1", ["bar1"], ["top1.txt", "top2.txt"]),
             ("/foo2", ["bar2"], ["top3.bin"]),
+            ("/foo3", [], []),
+            ("/foo1/bar1", [], []),
+            ("/foo2/bar2", ["bar3"], []),
+            ("/foo2/bar2/bar3", [], ["test.txt"]),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_filter(self):
+        _walk = self._walk_step_names(filter=["top*.txt"])
+        expected = [
+            ("/", ["foo1", "foo2", "foo3"], []),
+            ("/foo1", ["bar1"], ["top1.txt", "top2.txt"]),
+            ("/foo2", ["bar2"], []),
+            ("/foo3", [], []),
+            ("/foo1/bar1", [], []),
+            ("/foo2/bar2", ["bar3"], []),
+            ("/foo2/bar2/bar3", [], []),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_exclude(self):
+        _walk = self._walk_step_names(exclude=["top*"])
+        expected = [
+            ("/", ["foo1", "foo2", "foo3"], []),
+            ("/foo1", ["bar1"], []),
+            ("/foo2", ["bar2"], []),
             ("/foo3", [], []),
             ("/foo1/bar1", [], []),
             ("/foo2/bar2", ["bar3"], []),
@@ -121,6 +147,63 @@ class TestWalk(TestBoundWalkerBase):
         ]
         self.assertEqual(_walk, expected)
 
+    def test_walk_filter_glob_1(self):
+        _walk = self._walk_step_names(filter_glob=["/foo*/bar*/"])
+        expected = [
+            ("/", ["foo1", "foo2", "foo3"], []),
+            ("/foo1", ["bar1"], []),
+            ("/foo2", ["bar2"], []),
+            ("/foo3", [], []),
+            ("/foo1/bar1", [], []),
+            ("/foo2/bar2", [], []),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_filter_glob_2(self):
+        _walk = self._walk_step_names(filter_glob=["/foo*/bar**"])
+        expected = [
+            ("/", ["foo1", "foo2", "foo3"], []),
+            ("/foo1", ["bar1"], []),
+            ("/foo2", ["bar2"], []),
+            ("/foo3", [], []),
+            ("/foo1/bar1", [], []),
+            ("/foo2/bar2", ["bar3"], []),
+            ("/foo2/bar2/bar3", [], ["test.txt"]),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_filter_mix(self):
+        _walk = self._walk_step_names(filter_glob=["/foo2/bar**"], filter=["top1.txt"])
+        expected = [
+            ("/", ["foo2"], []),
+            ("/foo2", ["bar2"], []),
+            ("/foo2/bar2", ["bar3"], []),
+            ("/foo2/bar2/bar3", [], []),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_exclude_dirs(self):
+        _walk = self._walk_step_names(exclude_dirs=["bar*", "foo2"])
+        expected = [
+            ("/", ["foo1", "foo3"], []),
+            ("/foo1", [], ["top1.txt", "top2.txt"]),
+            ("/foo3", [], []),
+        ]
+        self.assertEqual(_walk, expected)
+
+    def test_walk_exclude_glob(self):
+        _walk = self._walk_step_names(exclude_glob=["**top*", "test.txt"])
+        expected = [
+            ("/", ["foo1", "foo2", "foo3"], []),
+            ("/foo1", ["bar1"], []),
+            ("/foo2", ["bar2"], []),
+            ("/foo3", [], []),
+            ("/foo1/bar1", [], []),
+            ("/foo2/bar2", ["bar3"], []),
+            ("/foo2/bar2/bar3", [], ["test.txt"]),
+        ]
+        self.assertEqual(_walk, expected)
+
     def test_walk_depth(self):
         _walk = self._walk_step_names(search="depth")
         expected = [
@@ -134,7 +217,7 @@ class TestWalk(TestBoundWalkerBase):
         ]
         self.assertEqual(_walk, expected)
 
-    def test_walk_directory(self):
+    def test_walk_path(self):
         _walk = self._walk_step_names("foo2")
         expected = [
             ("/foo2", ["bar2"], ["top3.bin"]),
@@ -143,21 +226,21 @@ class TestWalk(TestBoundWalkerBase):
         ]
         self.assertEqual(_walk, expected)
 
-    def test_walk_levels_1(self):
-        _walk = self._walk_step_names(max_depth=1)
+    def test_walk_max_depth_1_breadth(self):
+        _walk = self._walk_step_names(max_depth=1, search="breadth")
         expected = [
             ("/", ["foo1", "foo2", "foo3"], []),
         ]
         self.assertEqual(_walk, expected)
 
-    def test_walk_levels_1_depth(self):
-        _walk = self._walk_step_names(max_depth=1)
+    def test_walk_max_depth_1_depth(self):
+        _walk = self._walk_step_names(max_depth=1, search="depth")
         expected = [
             ("/", ["foo1", "foo2", "foo3"], []),
         ]
         self.assertEqual(_walk, expected)
 
-    def test_walk_levels_2(self):
+    def test_walk_max_depth_2(self):
         _walk = self._walk_step_names(max_depth=2)
         expected = [
             ("/", ["foo1", "foo2", "foo3"], []),

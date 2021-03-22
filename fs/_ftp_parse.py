@@ -78,7 +78,7 @@ def parse(lines):
 
 def parse_line(line):
     for line_re, decode_callable in get_decoders():
-        match = line_re.match(line)
+        match = line_re._match(line)
         if match is not None:
             return decode_callable(line, match)
     return None

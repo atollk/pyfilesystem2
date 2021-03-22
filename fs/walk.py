@@ -97,12 +97,12 @@ class Walker(object):
             max_depth (int, optional): Maximum directory depth to walk.
             filter_glob (list, optional): If supplied, this parameter
                 should be a list of path patterns e.g. ``["foo/**/*.py"]``.
-                Resources will only be returned if their global patah
-                matches one of the patterns.
+                Resources will only be returned if their global path or
+                an extension of it matches one of the patterns.
             exclude_glob (list, optional): If supplied, this parameter
                 should be a list of path patterns e.g. ``["foo/**/*.py"]``.
-                Resources will only be returned if their global patah
-                matches one of the patterns.
+                Resources will not be returned if their global path or
+                an extension of it  matches one of the patterns.
 
         """
         if search not in ("breadth", "depth"):
@@ -215,13 +215,18 @@ class Walker(object):
     def _check_open_dir(self, fs, path, info):
         # type: (FS, Text, Info) -> bool
         """Check if a directory should be considered in the walk."""
+        full_path = ("" if path == "/" else path) + "/" + info.name
         if self.exclude_dirs is not None and fs.match(self.exclude_dirs, info.name):
             return False
-        if self.exclude_glob is not None and fs.match(self.exclude_glob, path):
+        if self.exclude_glob is not None and fs.match(self.exclude_glob, full_path):
             return False
-        if self.filter_dirs is not None and not fs.match(self.filter_dirs, info.name):
+        if self.filter_dirs is not None and not fs.match(
+            self.filter_dirs, info.name, accept_prefix=True
+        ):
             return False
-        if self.filter_glob is not None and not fs.match(self.filter_glob, path):
+        if self.filter_glob is not None and not fs.match(
+            self.filter_glob, full_path, accept_prefix=True
+        ):
             return False
         return self.check_open_dir(fs, path, info)
 
@@ -268,14 +273,22 @@ class Walker(object):
         """
         return True
 
-    def _check_file(self, fs, info):
-        # type: (FS, Info) -> bool
+    def _check_file(self, fs, dir_path, info):
+        # type: (FS, Text, Info) -> bool
         """Check if a filename should be included."""
         # Weird check required for backwards compatibility, when _check_file did not exist.
         if Walker._check_file == type(self)._check_file:
             if self.exclude is not None and fs.match(self.exclude, info.name):
                 return False
+            if self.exclude_glob is not None and fs.match(
+                self.exclude_glob, dir_path + "/" + info.name
+            ):
+                return False
             if self.filter is not None and not fs.match(self.filter, info.name):
+                return False
+            if self.filter_glob is not None and not fs.match(
+                self.filter_glob, dir_path + "/" + info.name, accept_prefix=True
+            ):
                 return False
         return self.check_file(fs, info)
 
@@ -462,7 +475,7 @@ class Walker(object):
                         if _check_scan_dir(fs, dir_path, info, _depth):
                             push(_combine(dir_path, info.name))
                 else:
-                    if _check_file(fs, info):
+                    if _check_file(fs, dir_path, info):
                         yield dir_path, info  # Found a file
             yield dir_path, None  # End of directory
 
@@ -513,7 +526,7 @@ class Walker(object):
                     else:
                         yield dir_path, info
             else:
-                if _check_file(fs, info):
+                if _check_file(fs, dir_path, info):
                     yield dir_path, info
 
 
