@@ -10,7 +10,6 @@ import typing
 from .lrucache import LRUCache
 from ._repr import make_repr
 from .path import iteratepath
-from . import wildcard
 
 
 GlobMatch = namedtuple("GlobMatch", ["path", "info"])
@@ -30,13 +29,16 @@ _PATTERN_CACHE = LRUCache(
 def _translate(pattern, case_sensitive=True):
     # type: (Text, bool) -> Text
     """Translate a wildcard pattern to a regular expression.
+
     There is no way to quote meta-characters.
     Arguments:
         pattern (str): A wildcard pattern.
         case_sensitive (bool): Set to `False` to use a case
             insensitive regex (default `True`).
+
     Returns:
         str: A regex equivalent to the given pattern.
+
     """
     if not case_sensitive:
         pattern = pattern.lower()
@@ -70,6 +72,7 @@ def _translate(pattern, case_sensitive=True):
         else:
             res = res + re.escape(c)
     return res
+
 
 def _translate_glob(pattern, case_sensitive=True):
     levels = 0
