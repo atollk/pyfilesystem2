@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added FTP over TLS (FTPS) support to FTPFS.
   Closes [#437](https://github.com/PyFilesystem/pyfilesystem2/issues/437),
   [#449](https://github.com/PyFilesystem/pyfilesystem2/pull/449).
+- To `fs.walk.Walker`, added parameters `filter_glob` and `exclude_glob`.
+  Closes [#459](https://github.com/PyFilesystem/pyfilesystem2/issues/459).
 
 ### Changed
 
@@ -31,6 +33,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Make `FTPFile`, `MemoryFile` and `RawWrapper` accept [`array.array`](https://docs.python.org/3/library/array.html)
   arguments for the `write` and `writelines` methods, as expected by their base class [`io.RawIOBase`](https://docs.python.org/3/library/io.html#io.RawIOBase).
 - Various documentation issues, including `MemoryFS` docstring not rendering properly.
+- Elaborated documentation of `filter_dirs` and `exclude_dirs` in `fs.walk.Walker`.
+  Closes [#371](https://github.com/PyFilesystem/pyfilesystem2/issues/371).
 
 
 ## [2.4.12] - 2021-01-14
