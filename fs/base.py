@@ -22,7 +22,6 @@ import warnings
 import six
 
 from . import copy, errors, fsencode, iotools, move, tools, walk, wildcard
-from .errors import Unsupported
 from .glob import BoundGlobber
 from .mode import validate_open_mode
 from .path import abspath, join, normpath
@@ -680,7 +679,7 @@ class FS(object):
     gettext = _new_name(readtext, "gettext")
 
     def getmodified(self, path):
-        # type: (Text) -> datetime
+        # type: (Text) -> Optional[datetime]
         """Get the timestamp of the last modifying access of a resource.
 
         Arguments:
@@ -694,15 +693,9 @@ class FS(object):
         it might only have limited accuracy.
 
         """
-        timestamp = self.getinfo(path, ("details", "modified")).modified
-        if timestamp is None:
-            raise Unsupported(
-                "Last modified time is not supported by the filesystem"
-                + "for the requested resource: "
-                + path
-            )
-        else:
-            return timestamp
+        if self.getmeta().get("supports_mtime", False):
+            return self.getinfo(path, namespaces=["modified"]).modified
+        return self.getinfo(path, namespaces=["details"]).modified
 
     def getmeta(self, namespace="standard"):
         # type: (Text) -> Mapping[Text, object]

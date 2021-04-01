@@ -13,10 +13,8 @@ import threading
 import typing
 from collections import OrderedDict
 from contextlib import contextmanager
-from datetime import datetime
 from ftplib import FTP
 
-from .time import epoch_to_datetime
 
 try:
     from ftplib import FTP_TLS
@@ -587,18 +585,6 @@ class FTPFS(FS):
                 return True
         return False
 
-    def getmodified(self, path):
-        # type: (Text) -> datetime
-        if "MDTM" in self.features:
-            with self._lock:
-                with ftp_errors(self, path=path):
-                    cmd = "MDTM " + _encode(self.validatepath(path), self.ftp.encoding)
-                    response = self.ftp.sendcmd(cmd)
-                time_num = self._parse_ftp_time(response.split()[1])
-                if time_num is not None:
-                    return epoch_to_datetime(time_num)
-        return super(FTPFS, self).getmodified(path)
-
     @classmethod
     def _parse_ftp_time(cls, time_text):
         # type: (Text) -> Optional[int]
@@ -681,6 +667,18 @@ class FTPFS(FS):
                     "details": {"type": int(ResourceType.directory)},
                 }
             )
+
+        if "modified" in namespaces:
+            if "basic" in namespaces or "details" in namespaces:
+                raise ValueError(
+                    'Cannot use the "modified" namespace in combination with others.'
+                )
+            with self._lock:
+                with ftp_errors(self, path=path):
+                    cmd = "MDTM " + _encode(self.validatepath(path), self.ftp.encoding)
+                    response = self.ftp.sendcmd(cmd)
+                modified_info = {"modified": self._parse_ftp_time(response.split()[1])}
+                return Info({"modified": modified_info})
 
         if self.supports_mlst:
             with self._lock:
