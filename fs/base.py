@@ -741,6 +741,8 @@ class FS(object):
         read_only           `True` if this filesystem is read only.
         supports_rename     `True` if this filesystem supports an
                             `os.rename` operation.
+        supports_mtime      `True` if this filesystem supports a native
+                            operation to retreive the "last modified" time.
         =================== ============================================
 
         Most builtin filesystems will provide all these keys, and third-

@@ -707,6 +707,7 @@ class FTPFS(FS):
         if namespace == "standard":
             _meta = self._meta.copy()
             _meta["unicode_paths"] = "UTF8" in self.features
+            _meta["supports_mtime"] = "MDTM" in self.features
         return _meta
 
     def listdir(self, path):
