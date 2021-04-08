@@ -8,11 +8,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- Added `fs.copy.copy_file_if`, `fs.copy.copy_dir_if`, and `fs.copy.copy_fs_if`. 
+  Closes [#458](https://github.com/PyFilesystem/pyfilesystem2/issues/458).
+  
 ### Changed
 
 - FTP servers that do not support the MLST command now try to use the MDTM command to
   retrieve the last modification timestamp of a resource. 
   Closes [#456](https://github.com/PyFilesystem/pyfilesystem2/pull/456).
+  
+### Fixed
+
+- Fixed performance bugs in `fs.copy.copy_dir_if_newer`. Test cases were adapted to catch those bugs in the future.
 
 
 ## [2.4.13] - 2021-03-27
