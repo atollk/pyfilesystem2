@@ -3,6 +3,7 @@
 
 from __future__ import print_function, unicode_literals
 
+import calendar
 import typing
 import warnings
 
@@ -513,13 +514,8 @@ def copy_modified_time(
         dst_path (str): Path to a directory on the destination filesystem.
 
     """
-    namespaces = ("details",)
     with manage_fs(src_fs, writeable=False) as _src_fs:
         with manage_fs(dst_fs, create=True) as _dst_fs:
-            src_meta = _src_fs.getinfo(src_path, namespaces)
-            src_details = src_meta.raw.get("details", {})
-            dst_details = {}
-            for value in ("metadata_changed", "modified"):
-                if value in src_details:
-                    dst_details[value] = src_details[value]
-            _dst_fs.setinfo(dst_path, {"details": dst_details})
+            src_modified = _src_fs.getmodified(src_path)
+            modified_timestamp = calendar.timegm(src_modified.timetuple())
+            _dst_fs.setinfo(dst_path, {"details": {"modified": modified_timestamp}})
