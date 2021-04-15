@@ -1604,8 +1604,8 @@ class FS(object):
         if self.isclosed():
             raise errors.FilesystemClosed()
 
-    def match(self, patterns, name):
-        # type: (Optional[Iterable[Text]], Text) -> bool
+    def match(self, patterns, name, accept_prefix=False):
+        # type: (Optional[Iterable[Text]], Text, bool) -> bool
         """Check if a name matches any of a list of wildcards.
 
         If a filesystem is case *insensitive* (such as Windows) then
@@ -1618,6 +1618,9 @@ class FS(object):
             patterns (list, optional): A list of patterns, e.g.
                 ``['*.py']``, or `None` to match everything.
             name (str): A file or directory name (not a path)
+            accept_prefix (bool): If ``True``, the name is
+                not required to match the wildcards themselves
+                but only need to be a prefix of a string that does.
 
         Returns:
             bool: `True` if ``name`` matches any of the patterns.
@@ -1644,7 +1647,9 @@ class FS(object):
         case_sensitive = not typing.cast(
             bool, self.getmeta().get("case_insensitive", False)
         )
-        matcher = wildcard.get_matcher(patterns, case_sensitive)
+        matcher = wildcard.get_matcher(
+            patterns, case_sensitive, accept_prefix=accept_prefix
+        )
         return matcher(name)
 
     def tree(self, **kwargs):
