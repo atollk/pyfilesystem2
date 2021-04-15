@@ -29,6 +29,12 @@ class TestFNMatch(unittest.TestCase):
         self.assertTrue(wildcard.imatch("*.py", "FILE.py"))
         self.assertTrue(wildcard.imatch("*.py", "file.PY"))
 
+        self.assertFalse(wildcard.match("foo*.jpg", "foo/a.jpg"))
+        self.assertTrue(wildcard.match("foo**.jpg", "foo/a.jpg"))
+        self.assertTrue(wildcard.match("foo**", "foo/a.jpg"))
+        self.assertTrue(wildcard.match("**.jpg", "foo/a.jpg"))
+        self.assertTrue(wildcard.match("**", "foo/a.jpg"))
+
     def test_match_any(self):
         self.assertTrue(wildcard.match_any([], "foo.py"))
         self.assertTrue(wildcard.imatch_any([], "foo.py"))
