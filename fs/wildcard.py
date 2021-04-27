@@ -13,6 +13,8 @@ from __future__ import unicode_literals, print_function
 
 import typing
 
+from ._repr import make_repr
+from .errors import PatternError
 from .lrucache import LRUCache
 
 if typing.TYPE_CHECKING:
@@ -142,6 +144,7 @@ def get_matcher(patterns, case_sensitive, accept_prefix=False):
 
 class _PatternMatcher:
     def __init__(self, pattern, case_sensitive, accept_prefixes):
+        self.pattern = pattern
         self.case_sensitive = case_sensitive
         self.accept_prefixes = accept_prefixes
 
@@ -151,11 +154,11 @@ class _PatternMatcher:
             if pattern[i] == "[":
                 start = i
                 i = pattern.find("]", i) + 1
+                if i == 0:
+                    raise PatternError(pattern, len(pattern) - 1)
                 self.tokens.append(_PatternMatcherToken(pattern[start:i]))
             elif pattern[i] == "]":
-                raise ValueError(
-                    pattern + " is not a valid wildcard pattern. (unmatched ])"
-                )
+                raise PatternError(pattern, i)
             elif pattern[i] == "?":
                 self.tokens.append(_PatternMatcherToken("?"))
                 i += 1
@@ -166,11 +169,7 @@ class _PatternMatcher:
                 ] == "*":
                     asterik_len += 1
                 if asterik_len > 2:
-                    raise ValueError(
-                        pattern
-                        + " is not a valid wildcard pattern. "
-                        + "(sequence of three or more *)"
-                    )
+                    raise PatternError(pattern, i + 2)
                 self.tokens.append(_PatternMatcherToken("*" * asterik_len))
                 i += asterik_len
             else:
@@ -194,13 +193,21 @@ class _PatternMatcher:
         else:
             return self._match(tokens[1:], text[1:]) or self._match(tokens, text[1:])
 
+    def __repr__(self):
+        return make_repr(
+            "_PatternMatcher",
+            self.pattern,
+            case_sensitive=(self.case_sensitive, None),
+            accept_prefixes=(self.accept_prefixes, None),
+        )
+
 
 class _PatternMatcherToken:
     def __init__(self, token_str):
         self.token_str = token_str
 
     def __repr__(self):
-        return "_PatternMatcherToken (" + self.token_str + ")"
+        return "_PatternMatcherToken({!r})".format(self.token_str)
 
     def match(self, character, case_sensitive):
         if self.token_str[0] == "[":
