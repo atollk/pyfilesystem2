@@ -1661,6 +1661,10 @@ class FS(object):
             True
             >>> my_fs.match(['*.jpg', '*.png'], 'foo.gif')
             False
+            >>> my_fs.match(['dir/file.txt'], 'dir/', accept_prefix=True)
+            True
+            >>> my_fs.match(['dir/file.txt'], 'dir/gile.txt', accept_prefix=True)
+            False
 
         Note:
             If ``patterns`` is `None` (or ``['*']``), then this
