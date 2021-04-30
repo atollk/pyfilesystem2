@@ -22,6 +22,7 @@ class TestGlob(unittest.TestCase):
         tests = [
             ("*.?y", "/test.py", True),
             ("*.py", "/test.py", True),
+            ("*.py", "__init__.py", True),
             ("*.py", "/test.pc", False),
             ("*.py", "/foo/test.py", False),
             ("foo/*.py", "/foo/test.py", True),

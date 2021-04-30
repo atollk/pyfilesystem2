@@ -1691,7 +1691,7 @@ class FS(object):
         matcher = wildcard.get_matcher(patterns, case_sensitive)
         return matcher(name)
 
-    def match_glob(self, patterns, name, accept_prefix=False):
+    def match_glob(self, patterns, path, accept_prefix=False):
         # type: (Optional[Iterable[Text]], Text, bool) -> bool
         """Check if a path matches any of a list of glob patterns.
 
@@ -1704,26 +1704,27 @@ class FS(object):
         Arguments:
             patterns (list, optional): A list of patterns, e.g.
                 ``['*.py']``, or `None` to match everything.
-            name (str): A file or directory name (not a path)
-            accept_prefix (bool): If ``True``, the name is
+            path (str): A resource path, starting with "/".
+            accept_prefix (bool): If ``True``, the path is
                 not required to match the wildcards themselves
                 but only need to be a prefix of a string that does.
 
         Returns:
-            bool: `True` if ``name`` matches any of the patterns.
+            bool: `True` if ``path`` matches any of the patterns.
 
         Raises:
             TypeError: If ``patterns`` is a single string instead of
                 a list (or `None`).
+            ValueError: If ``path`` is not a string starting with "/".
 
         Example:
-            >>> my_fs.match_glob(['*.py'], '__init__.py')
+            >>> my_fs.match_glob(['*.py'], '/__init__.py')
             True
-            >>> my_fs.match_glob(['*.jpg', '*.png'], 'foo.gif')
+            >>> my_fs.match_glob(['*.jpg', '*.png'], '/foo.gif')
             False
-            >>> my_fs.match_glob(['dir/file.txt'], 'dir/', accept_prefix=True)
+            >>> my_fs.match_glob(['dir/file.txt'], '/dir/', accept_prefix=True)
             True
-            >>> my_fs.match_glob(['dir/file.txt'], 'dir/gile.txt', accept_prefix=True)
+            >>> my_fs.match_glob(['dir/file.txt'], '/dir/gile.txt', accept_prefix=True)
             False
 
         Note:
@@ -1733,6 +1734,8 @@ class FS(object):
         """
         if patterns is None:
             return True
+        if not path or path[0] != "/":
+            raise ValueError("%s needs to be a string starting with /" % path)
         if isinstance(patterns, six.text_type):
             raise TypeError("patterns must be a list or sequence")
         case_sensitive = not typing.cast(
@@ -1741,7 +1744,7 @@ class FS(object):
         matcher = glob.get_matcher(
             patterns, case_sensitive, accept_prefix=accept_prefix
         )
-        return matcher(name)
+        return matcher(path)
 
     def tree(self, **kwargs):
         # type: (**Any) -> None

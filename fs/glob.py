@@ -150,6 +150,8 @@ def match(pattern, path):
     except KeyError:
         levels, recursive, re_pattern = _translate_glob(pattern, case_sensitive=True)
         _PATTERN_CACHE[(pattern, True)] = (levels, recursive, re_pattern)
+    if path and path[0] != "/":
+        path = "/" + path
     return bool(re_pattern.match(path))
 
 
@@ -170,6 +172,8 @@ def imatch(pattern, path):
     except KeyError:
         levels, recursive, re_pattern = _translate_glob(pattern, case_sensitive=True)
         _PATTERN_CACHE[(pattern, False)] = (levels, recursive, re_pattern)
+    if path and path[0] != "/":
+        path = "/" + path
     return bool(re_pattern.match(path))
 
 
@@ -246,9 +250,11 @@ def get_matcher(patterns, case_sensitive, accept_prefix=False):
         new_patterns = []
         for pattern in patterns:
             split = _split_pattern_by_rec(pattern)
-            for i in range(len(split)):
-                new_pattern = "/".join(split[: i + 1])
+            for i in range(1, len(split)):
+                new_pattern = "/".join(split[:i])
                 new_patterns.append(new_pattern)
+                new_patterns.append(new_pattern + "/")
+            new_patterns.append(pattern)
         patterns = new_patterns
 
     matcher = match_any if case_sensitive else imatch_any
