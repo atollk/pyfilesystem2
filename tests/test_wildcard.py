@@ -29,37 +29,6 @@ class TestFNMatch(unittest.TestCase):
         self.assertTrue(wildcard.imatch("*.py", "FILE.py"))
         self.assertTrue(wildcard.imatch("*.py", "file.PY"))
 
-        self.assertFalse(wildcard.match("foo*.jpg", "foo/a.jpg"))
-        self.assertTrue(wildcard.match("foo**.jpg", "foo/a.jpg"))
-        self.assertTrue(wildcard.match("foo**", "foo/a.jpg"))
-        self.assertTrue(wildcard.match("**.jpg", "foo/a.jpg"))
-        self.assertTrue(wildcard.match("**", "foo/a.jpg"))
-
-    def test_wildcard_accept_prefix(self):
-        self.assertTrue(wildcard.match("*.py", "file", accept_prefix=True))
-        self.assertTrue(wildcard.match("????.py", "????", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py", "file.p", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py[co]", "file.p", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py[co]", "file.p", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py[!c]", "file.py", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py[^]", "file.py^", accept_prefix=True))
-
-        self.assertTrue(wildcard.match("*.jpg", "file.py", accept_prefix=True))
-        self.assertFalse(wildcard.match("toolong.py", "????.py", accept_prefix=True))
-        self.assertFalse(wildcard.match("file.pyc", "file.pyca", accept_prefix=True))
-        self.assertFalse(wildcard.match("file.py[co]", "file.pyx", accept_prefix=True))
-        self.assertFalse(wildcard.match("file.py[!o]", "file.pyo", accept_prefix=True))
-        self.assertTrue(wildcard.match("file.py[]", "f", accept_prefix=True))
-
-        self.assertTrue(wildcard.imatch("*.py", "FILE.p", accept_prefix=True))
-        self.assertTrue(wildcard.imatch("*.py", "file.", accept_prefix=True))
-
-        self.assertFalse(wildcard.match("foo*.jpg", "foo/", accept_prefix=True))
-        self.assertTrue(wildcard.match("foo**.jpg", "foo", accept_prefix=True))
-        self.assertTrue(wildcard.match("foo**", "foo/", accept_prefix=True))
-        self.assertTrue(wildcard.match("**.jpg", "foo", accept_prefix=True))
-        self.assertTrue(wildcard.match("**", "foo/a.j", accept_prefix=True))
-
     def test_match_any(self):
         self.assertTrue(wildcard.match_any([], "foo.py"))
         self.assertTrue(wildcard.imatch_any([], "foo.py"))

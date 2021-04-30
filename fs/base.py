@@ -21,7 +21,7 @@ import warnings
 
 import six
 
-from . import copy, errors, fsencode, iotools, move, tools, walk, wildcard
+from . import copy, errors, fsencode, iotools, move, tools, walk, wildcard, glob
 from .copy import copy_modified_time
 from .glob import BoundGlobber
 from .mode import validate_open_mode
@@ -1662,9 +1662,6 @@ class FS(object):
             patterns (list, optional): A list of patterns, e.g.
                 ``['*.py']``, or `None` to match everything.
             name (str): A file or directory name (not a path)
-            accept_prefix (bool): If ``True``, the name is
-                not required to match the wildcards themselves
-                but only need to be a prefix of a string that does.
 
         Returns:
             bool: `True` if ``name`` matches any of the patterns.
@@ -1677,10 +1674,6 @@ class FS(object):
             >>> my_fs.match(['*.py'], '__init__.py')
             True
             >>> my_fs.match(['*.jpg', '*.png'], 'foo.gif')
-            False
-            >>> my_fs.match(['dir/file.txt'], 'dir/', accept_prefix=True)
-            True
-            >>> my_fs.match(['dir/file.txt'], 'dir/gile.txt', accept_prefix=True)
             False
 
         Note:
@@ -1695,7 +1688,57 @@ class FS(object):
         case_sensitive = not typing.cast(
             bool, self.getmeta().get("case_insensitive", False)
         )
-        matcher = wildcard.get_matcher(
+        matcher = wildcard.get_matcher(patterns, case_sensitive)
+        return matcher(name)
+
+    def match_glob(self, patterns, name, accept_prefix=False):
+        # type: (Optional[Iterable[Text]], Text, bool) -> bool
+        """Check if a path matches any of a list of glob patterns.
+
+        If a filesystem is case *insensitive* (such as Windows) then
+        this method will perform a case insensitive match (i.e. ``*.py``
+        will match the same names as ``*.PY``). Otherwise the match will
+        be case sensitive (``*.py`` and ``*.PY`` will match different
+        names).
+
+        Arguments:
+            patterns (list, optional): A list of patterns, e.g.
+                ``['*.py']``, or `None` to match everything.
+            name (str): A file or directory name (not a path)
+            accept_prefix (bool): If ``True``, the name is
+                not required to match the wildcards themselves
+                but only need to be a prefix of a string that does.
+
+        Returns:
+            bool: `True` if ``name`` matches any of the patterns.
+
+        Raises:
+            TypeError: If ``patterns`` is a single string instead of
+                a list (or `None`).
+
+        Example:
+            >>> my_fs.match_glob(['*.py'], '__init__.py')
+            True
+            >>> my_fs.match_glob(['*.jpg', '*.png'], 'foo.gif')
+            False
+            >>> my_fs.match_glob(['dir/file.txt'], 'dir/', accept_prefix=True)
+            True
+            >>> my_fs.match_glob(['dir/file.txt'], 'dir/gile.txt', accept_prefix=True)
+            False
+
+        Note:
+            If ``patterns`` is `None` (or ``['*']``), then this
+            method will always return `True`.
+
+        """
+        if patterns is None:
+            return True
+        if isinstance(patterns, six.text_type):
+            raise TypeError("patterns must be a list or sequence")
+        case_sensitive = not typing.cast(
+            bool, self.getmeta().get("case_insensitive", False)
+        )
+        matcher = glob.get_matcher(
             patterns, case_sensitive, accept_prefix=accept_prefix
         )
         return matcher(name)

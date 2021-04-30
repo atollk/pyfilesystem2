@@ -218,13 +218,13 @@ class Walker(object):
         full_path = ("" if path == "/" else path) + "/" + info.name
         if self.exclude_dirs is not None and fs.match(self.exclude_dirs, info.name):
             return False
-        if self.exclude_glob is not None and fs.match(self.exclude_glob, full_path):
-            return False
-        if self.filter_dirs is not None and not fs.match(
-            self.filter_dirs, info.name, accept_prefix=True
+        if self.exclude_glob is not None and fs.match_glob(
+            self.exclude_glob, full_path
         ):
             return False
-        if self.filter_glob is not None and not fs.match(
+        if self.filter_dirs is not None and not fs.match(self.filter_dirs, info.name):
+            return False
+        if self.filter_glob is not None and not fs.match_glob(
             self.filter_glob, full_path, accept_prefix=True
         ):
             return False
@@ -281,13 +281,13 @@ class Walker(object):
         if Walker._check_file == type(self)._check_file:
             if self.exclude is not None and fs.match(self.exclude, info.name):
                 return False
-            if self.exclude_glob is not None and fs.match(
+            if self.exclude_glob is not None and fs.match_glob(
                 self.exclude_glob, dir_path + "/" + info.name
             ):
                 return False
             if self.filter is not None and not fs.match(self.filter, info.name):
                 return False
-            if self.filter_glob is not None and not fs.match(
+            if self.filter_glob is not None and not fs.match_glob(
                 self.filter_glob, dir_path + "/" + info.name, accept_prefix=True
             ):
                 return False
