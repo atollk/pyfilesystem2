@@ -192,7 +192,7 @@ class TestWalk(TestBoundWalkerBase):
         self.assertEqual(_walk, expected)
 
     def test_walk_exclude_glob(self):
-        _walk = self._walk_step_names(exclude_glob=["**top*", "test.txt"])
+        _walk = self._walk_step_names(exclude_glob=["**/top*", "test.txt"])
         expected = [
             ("/", ["foo1", "foo2", "foo3"], []),
             ("/foo1", ["bar1"], []),
@@ -265,6 +265,10 @@ class TestDirs(TestBoundWalkerBase):
             ["/foo1/bar1", "/foo1", "/foo2/bar2/bar3", "/foo2/bar2", "/foo2", "/foo3"],
         )
 
+        dirs = list(self.fs.walk.dirs(search="depth", exclude_dirs=["foo2"]))
+        self.assertEqual(dirs, ["/foo1/bar1", "/foo1", "/foo3"])
+
+    def test_foo(self):
         dirs = list(self.fs.walk.dirs(search="depth", exclude_dirs=["foo2"]))
         self.assertEqual(dirs, ["/foo1/bar1", "/foo1", "/foo3"])
 

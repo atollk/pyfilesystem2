@@ -1,33 +1,24 @@
 """Match wildcard filenames.
-
-Patterns are derived from Unix shell style:
-
-*       matches everything except for a path seperator
-**      matches everything
-?       matches any single character
-[seq]   matches any character in seq
-[!seq]  matches any char not in seq
 """
+# Adapted from https://hg.python.org/cpython/file/2.7/Lib/fnmatch.py
 
 from __future__ import unicode_literals, print_function
 
+import re
 import typing
+from functools import partial
 
-from ._repr import make_repr
-from .errors import PatternError
 from .lrucache import LRUCache
 
 if typing.TYPE_CHECKING:
-    from typing import Callable, Iterable, Text, Tuple
+    from typing import Callable, Iterable, Text, Tuple, Pattern
 
 
-_PATTERN_CACHE = LRUCache(
-    1000
-)  # type: LRUCache[Tuple[Text, bool, bool], _PatternMatcher]
+_PATTERN_CACHE = LRUCache(1000)  # type: LRUCache[Tuple[Text, bool], Pattern]
 
 
-def match(pattern, name, accept_prefix=False):
-    # type: (Text, Text, bool) -> bool
+def match(pattern, name):
+    # type: (Text, Text) -> bool
     """Test whether a name matches a wildcard pattern.
 
     Arguments:
@@ -38,17 +29,16 @@ def match(pattern, name, accept_prefix=False):
         bool: `True` if the filename matches the pattern.
 
     """
-    args = (pattern, True, accept_prefix)
     try:
-        pat = _PATTERN_CACHE[args]
+        re_pat = _PATTERN_CACHE[(pattern, True)]
     except KeyError:
-        pat = _PatternMatcher(*args)
-        _PATTERN_CACHE[args] = pat
-    return pat(name)
+        res = "(?ms)" + _translate(pattern) + r"\Z"
+        _PATTERN_CACHE[(pattern, True)] = re_pat = re.compile(res)
+    return re_pat.match(name) is not None
 
 
-def imatch(pattern, name, accept_prefix=False):
-    # type: (Text, Text, bool) -> bool
+def imatch(pattern, name):
+    # type: (Text, Text) -> bool
     """Test whether a name matches a wildcard pattern (case insensitive).
 
     Arguments:
@@ -59,17 +49,16 @@ def imatch(pattern, name, accept_prefix=False):
         bool: `True` if the filename matches the pattern.
 
     """
-    args = (pattern, False, accept_prefix)
     try:
-        pat = _PATTERN_CACHE[args]
+        re_pat = _PATTERN_CACHE[(pattern, False)]
     except KeyError:
-        pat = _PatternMatcher(*args)
-        _PATTERN_CACHE[args] = pat
-    return pat(name)
+        res = "(?ms)" + _translate(pattern, case_sensitive=False) + r"\Z"
+        _PATTERN_CACHE[(pattern, False)] = re_pat = re.compile(res, re.IGNORECASE)
+    return re_pat.match(name) is not None
 
 
-def match_any(patterns, name, accept_prefix=False):
-    # type: (Iterable[Text], Text, bool) -> bool
+def match_any(patterns, name):
+    # type: (Iterable[Text], Text) -> bool
     """Test if a name matches any of a list of patterns.
 
     Will return `True` if ``patterns`` is an empty list.
@@ -85,11 +74,11 @@ def match_any(patterns, name, accept_prefix=False):
     """
     if not patterns:
         return True
-    return any(match(pattern, name, accept_prefix) for pattern in patterns)
+    return any(match(pattern, name) for pattern in patterns)
 
 
-def imatch_any(patterns, name, accept_prefix=False):
-    # type: (Iterable[Text], Text, bool) -> bool
+def imatch_any(patterns, name):
+    # type: (Iterable[Text], Text) -> bool
     """Test if a name matches any of a list of patterns (case insensitive).
 
     Will return `True` if ``patterns`` is an empty list.
@@ -105,11 +94,11 @@ def imatch_any(patterns, name, accept_prefix=False):
     """
     if not patterns:
         return True
-    return any(imatch(pattern, name, accept_prefix) for pattern in patterns)
+    return any(imatch(pattern, name) for pattern in patterns)
 
 
-def get_matcher(patterns, case_sensitive, accept_prefix=False):
-    # type: (Iterable[Text], bool, bool) -> Callable[[Text], bool]
+def get_matcher(patterns, case_sensitive):
+    # type: (Iterable[Text], bool) -> Callable[[Text], bool]
     """Get a callable that matches names against the given patterns.
 
     Arguments:
@@ -117,9 +106,6 @@ def get_matcher(patterns, case_sensitive, accept_prefix=False):
             "*.pyc"]``
         case_sensitive (bool): If ``True``, then the callable will be case
             sensitive, otherwise it will be case insensitive.
-        accept_prefix (bool): If ``True``, then the callable will not only
-            find perfect matches but also strings that can be extended
-            to perfect matches.
 
     Returns:
         callable: a matcher that will return `True` if the name given as
@@ -137,97 +123,55 @@ def get_matcher(patterns, case_sensitive, accept_prefix=False):
     if not patterns:
         return lambda name: True
     if case_sensitive:
-        return lambda name: match_any(patterns, name, accept_prefix)
+        return partial(match_any, patterns)
     else:
-        return lambda name: imatch_any(patterns, name, accept_prefix)
+        return partial(imatch_any, patterns)
 
 
-class _PatternMatcher:
-    def __init__(self, pattern, case_sensitive, accept_prefixes):
-        self.pattern = pattern
-        self.case_sensitive = case_sensitive
-        self.accept_prefixes = accept_prefixes
+def _translate(pattern, case_sensitive=True):
+    # type: (Text, bool) -> Text
+    """Translate a wildcard pattern to a regular expression.
 
-        self.tokens = []
-        i = 0
-        while i < len(pattern):
-            if pattern[i] == "[":
-                start = i
-                i = pattern.find("]", i) + 1
-                if i == 0:
-                    raise PatternError(pattern, len(pattern) - 1)
-                self.tokens.append(_PatternMatcherToken(pattern[start:i]))
-            elif pattern[i] == "]":
-                raise PatternError(pattern, i)
-            elif pattern[i] == "?":
-                self.tokens.append(_PatternMatcherToken("?"))
-                i += 1
-            elif pattern[i] == "*":
-                asterik_len = 1
-                while (asterik_len + i) < len(pattern) and pattern[
-                    asterik_len + i
-                ] == "*":
-                    asterik_len += 1
-                if asterik_len > 2:
-                    raise PatternError(pattern, i + 2)
-                self.tokens.append(_PatternMatcherToken("*" * asterik_len))
-                i += asterik_len
+    There is no way to quote meta-characters.
+
+    Arguments:
+        pattern (str): A wildcard pattern.
+        case_sensitive (bool): Set to `False` to use a case
+            insensitive regex (default `True`).
+
+    Returns:
+        str: A regex equivalent to the given pattern.
+
+    """
+    if not case_sensitive:
+        pattern = pattern.lower()
+    i, n = 0, len(pattern)
+    res = []
+    while i < n:
+        c = pattern[i]
+        i = i + 1
+        if c == "*":
+            res.append("[^/]*")
+        elif c == "?":
+            res.append(".")
+        elif c == "[":
+            j = i
+            if j < n and pattern[j] == "!":
+                j = j + 1
+            if j < n and pattern[j] == "]":
+                j = j + 1
+            while j < n and pattern[j] != "]":
+                j = j + 1
+            if j >= n:
+                res.append("\\[")
             else:
-                self.tokens.append(_PatternMatcherToken(pattern[i]))
-                i += 1
-
-    def __call__(self, text):
-        return self._match(self.tokens, text)
-
-    def _match(self, tokens, text):
-        if not tokens:
-            return text == ""
-        if not text:
-            return self.accept_prefixes
-
-        match_count = tokens[0].match(text[0], self.case_sensitive)
-        if match_count == 0:
-            return False
-        elif match_count == 1:
-            return self._match(tokens[1:], text[1:])
+                stuff = pattern[i:j].replace("\\", "\\\\")
+                i = j + 1
+                if stuff[0] == "!":
+                    stuff = "^" + stuff[1:]
+                elif stuff[0] == "^":
+                    stuff = "\\" + stuff
+                res.append("[%s]" % stuff)
         else:
-            return self._match(tokens[1:], text[1:]) or self._match(tokens, text[1:])
-
-    def __repr__(self):
-        return make_repr(
-            "_PatternMatcher",
-            self.pattern,
-            case_sensitive=(self.case_sensitive, None),
-            accept_prefixes=(self.accept_prefixes, None),
-        )
-
-
-class _PatternMatcherToken:
-    def __init__(self, token_str):
-        self.token_str = token_str
-
-    def __repr__(self):
-        return "_PatternMatcherToken({!r})".format(self.token_str)
-
-    def match(self, character, case_sensitive):
-        if self.token_str[0] == "[":
-            if self.token_str[1] == "!":
-                matches = self.token_str[2:-1]
-                return 0 if character in matches else 1
-            else:
-                matches = self.token_str[1:-1]
-                return 1 if character in matches else 0
-
-        if self.token_str == "?":
-            return 1
-
-        if self.token_str == "*":
-            return 2 if character != "/" else 0
-
-        if self.token_str == "**":
-            return 2
-
-        if case_sensitive:
-            return 1 if self.token_str == character else 0
-        else:
-            return 1 if self.token_str.lower() == character.lower() else 0
+            res.append(re.escape(c))
+    return "".join(res)
